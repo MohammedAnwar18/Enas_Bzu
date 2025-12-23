@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جدول المحاضرات الجامعي</title>
+    <!-- استيراد خط Cairo للطباعة والتصميم -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            --text-color: #333;
+            --border-color: #e0e0e0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: var(--primary-gradient);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px; /* زيادة العرض لاستيعاب الجدول بشكل أفضل */
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            font-weight: 700;
+        }
+
+        .form-section {
+            background: var(--bg-gradient);
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 40px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #444;
+        }
+
+        input, select {
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-family: 'Cairo', sans-serif;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-container {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: bold;
+            font-family: 'Cairo', sans-serif;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-add {
+            background: #28a745;
+            color: white;
+        }
+        .btn-add:hover { background: #218838; transform: translateY(-2px); }
+
+        .btn-pdf {
+            background: #667eea;
+            color: white;
+        }
+        .btn-pdf:hover { background: #5a6fd6; transform: translateY(-2px); }
+
+        .btn-clear {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-clear:hover { background: #c82333; transform: translateY(-2px); }
+
+        /* تنسيق الجدول على الشاشة */
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
+        }
+
+        .schedule-table th {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .schedule-table td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: center;
+            vertical-align: top;
+            min-height: 100px;
+        }
+
+        .lecture-card {
+            background: #f8f9fa;
+            border-right: 4px solid #667eea;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            position: relative;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .lecture-title { font-weight: bold; margin-bottom: 5px; display: block; }
+        .lecture-info { font-size: 0.9em; color: #666; display: block; }
+        .delete-btn {
+            position: absolute;
+            top: 5px; left: 5px;
+            background: #ff6b6b; color: white;
+            border: none; border-radius: 50%;
+            width: 24px; height: 24px;
+            cursor: pointer; font-size: 12px;
+            line-height: 24px; text-align: center;
+        }
+
+        /* --- تنسيقات خاصة بالطباعة والتصدير --- */
+        
+        /* هذا هو الحاوية التي سنقوم بتصويرها وتصديرها */
+        #printableArea {
+            display: none; /* مخفي افتراضياً على الشاشة */
+            background: white;
+            padding: 0; /* المسافات الداخلية صفر للتحكم الدقيق */
+            width: 100%;
+        }
+
+        .print-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+        .print-title { font-size: 24px; font-weight: bold; color: #2c3e50; }
+        .print-subtitle { font-size: 14px; color: #7f8c8d; margin-top: 5px; }
+
+        .print-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .print-table th {
+            background-color: #667eea !important;
+            color: white !important;
+            border: 1px solid #4a5bb5 !important;
+            padding: 10px 5px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .print-table td {
+            border: 1px solid #ccc;
+            padding: 8px 5px;
+            text-align: center;
+            vertical-align: top;
+            min-height: 50px;
+            color: #333;
+        }
+
+        .print-lecture {
+            background-color: #f0f4f8;
+            border: 1px solid #d1d9e6;
+            border-radius: 4px;
+            padding: 6px;
+            margin-bottom: 4px;
+            font-size: 11px;
+        }
+        .print-lecture-title { font-weight: bold; color: #2c3e50; display: block; margin-bottom: 2px; }
+        .print-lecture-details { color: #555; display: block; line-height: 1.4; }
+
+        .alert {
+            padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: bold;
+            text-align: center;
+        }
+        .alert-error { background: #f8d7da; color: #721c24; }
+        .alert-success { background: #d4edda; color: #155724; }
+
+        @media (max-width: 768px) {
+            .container { padding: 15px; }
+            h1 { font-size: 1.8em; }
+            .form-row { grid-template-columns: 1fr; }
+        }
+
+        /* @media print: تحسين المظهر عند استخدام ctrl+p */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #printableArea, #printableArea * {
+                visibility: visible;
+            }
+            #printableArea {
+                display: block;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 10mm;
+            }
+            .no-print {
+                display: none !important;
+            }
+            /* إجبار الطباعة بالوضع الأفقي */
+            @page {
+                size: A4 landscape;
+                margin: 10mm;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>📚 جدول المحاضرات الجامعي</h1>
+        
+        <div id="alertContainer"></div>
+        
+        <div class="form-section no-print">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>اسم المادة</label>
+                    <input type="text" id="subject" placeholder="مثال: الرياضيات">
+                </div>
+                <div class="form-group">
+                    <label>اليوم</label>
+                    <select id="day">
+                        <option value="">اختر اليوم</option>
+                        <option value="السبت">السبت</option>
+                        <option value="الأحد">الأحد</option>
+                        <option value="الاثنين">الاثنين</option>
+                        <option value="الثلاثاء">الثلاثاء</option>
+                        <option value="الأربعاء">الأربعاء</option>
+                        <option value="الخميس">الخميس</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>وقت البداية</label>
+                    <input type="time" id="startTime">
+                </div>
+                <div class="form-group">
+                    <label>وقت النهاية</label>
+                    <input type="time" id="endTime">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>اسم الدكتور</label>
+                    <input type="text" id="professor" placeholder="د. محمد أحمد">
+                </div>
+                <div class="form-group">
+                    <label>اسم القاعة</label>
+                    <input type="text" id="room" placeholder="مثال: A101">
+                </div>
+            </div>
+            
+            <div class="btn-container">
+                <button class="btn-add" onclick="addLecture()">➕ إضافة المحاضرة</button>
+                <button class="btn-pdf" onclick="exportToPDF()">🖨️ تصدير PDF / طباعة</button>
+                <button class="btn-clear" onclick="clearAllData()">🗑️ مسح الكل</button>
+            </div>
+        </div>
+        
+        <!-- الجدول للعرض على الشاشة -->
+        <table class="schedule-table" id="screenTable">
+            <thead>
+                <tr>
+                    <th>الوقت</th>
+                    <th>السبت</th>
+                    <th>الأحد</th>
+                    <th>الاثنين</th>
+                    <th>الثلاثاء</th>
+                    <th>الأربعاء</th>
+                    <th>الخميس</th>
+                </tr>
+            </thead>
+            <tbody id="screenBody">
+            </tbody>
+        </table>
+    </div>
+
+    <!-- المنطقة المخصصة للطباعة والتصدير (مخفية في العرض العادي) -->
+    <div id="printableArea">
+        <div class="print-header">
+            <div class="print-title">جدول المحاضرات الأسبوعي</div>
+            <div class="print-subtitle">الفصل الدراسي الأول - العام الجامعي 2024/2025</div>
+        </div>
+        <table class="print-table" id="printTable">
+            <thead>
+                <tr>
+                    <th style="width: 12%">الوقت</th>
+                    <th style="width: 14.6%">السبت</th>
+                    <th style="width: 14.6%">الأحد</th>
+                    <th style="width: 14.6%">الاثنين</th>
+                    <th style="width: 14.6%">الثلاثاء</th>
+                    <th style="width: 14.6%">الأربعاء</th>
+                    <th style="width: 14.6%">الخميس</th>
+                </tr>
+            </thead>
+            <tbody id="printBody">
+            </tbody>
+        </table>
+    </div>
+
+    <!-- المكتبات المطلوبة -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <script>
+        let lectures = JSON.parse(localStorage.getItem('lectures')) || [];
+        const days = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
+
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            alertContainer.appendChild(alert);
+            setTimeout(() => alert.remove(), 3000);
+        }
+
+        function timeToMinutes(time) {
+            const [hours, minutes] = time.split(':').map(Number);
+            return hours * 60 + minutes;
+        }
+
+        function checkTimeConflict(day, startTime, endTime) {
+            const newStart = timeToMinutes(startTime);
+            const newEnd = timeToMinutes(endTime);
+            return lectures.some(lecture => {
+                if (lecture.day !== day) return false;
+                const existingStart = timeToMinutes(lecture.startTime);
+                const existingEnd = timeToMinutes(lecture.endTime);
+                return (newStart < existingEnd && newEnd > existingStart);
+            });
+        }
+
+        function addLecture() {
+            // ... (نفس كود الإضافة السابق بدون تغيير جوهري) ...
+            const subject = document.getElementById('subject').value.trim();
+            const day = document.getElementById('day').value;
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+            const professor = document.getElementById('professor').value.trim();
+            const room = document.getElementById('room').value.trim();
+
+            if (!subject || !day || !startTime || !endTime || !professor || !room) {
+                showAlert('❌ الرجاء ملء جميع الحقول', 'error');
+                return;
+            }
+            if (startTime >= endTime) {
+                showAlert('❌ وقت النهاية يجب أن يكون بعد وقت البداية', 'error');
+                return;
+            }
+            if (checkTimeConflict(day, startTime, endTime)) {
+                showAlert('❌ يوجد تعارض في الوقت', 'error');
+                return;
+            }
+
+            lectures.push({ id: Date.now(), subject, day, startTime, endTime, professor, room });
+            localStorage.setItem('lectures', JSON.stringify(lectures));
+
+            // تفريغ الحقول
+            ['subject', 'day', 'startTime', 'endTime', 'professor', 'room'].forEach(id => document.getElementById(id).value = '');
+            
+            showAlert('✅ تمت الإضافة', 'success');
+            renderSchedule();
+        }
+
+        function deleteLecture(id) {
+            if (confirm('حذف المحاضرة؟')) {
+                lectures = lectures.filter(l => l.id !== id);
+                localStorage.setItem('lectures', JSON.stringify(lectures));
+                renderSchedule();
+            }
+        }
+
+        function clearAllData() {
+            if (confirm('حذف الكل؟')) {
+                lectures = [];
+                localStorage.removeItem('lectures');
+                renderSchedule();
+            }
+        }
+
+        function getUniqueSortedTimes() {
+            return [...new Set(lectures.flatMap(l => [l.startTime, l.endTime]))].sort();
+        }
+
+        // دالة مساعدة لرسم صف في الجدول
+        function renderRow(tbody, slot, isPrintMode = false) {
+            const row = document.createElement('tr');
+            
+            // خلية الوقت
+            const timeCell = document.createElement('td');
+            timeCell.innerHTML = `<div style="font-weight:bold">${slot.start}</div><div style="font-size:0.9em; color:#666">${slot.end}</div>`;
+            if(isPrintMode) timeCell.style.backgroundColor = '#f8f9fa';
+            row.appendChild(timeCell);
+
+            // خلايا الأيام
+            days.forEach(day => {
+                const cell = document.createElement('td');
+                // البحث عن محاضرة تطابق الوقت واليوم
+                const lecture = lectures.find(l => l.day === day && l.startTime === slot.start && l.endTime === slot.end);
+                
+                if (lecture) {
+                    const div = document.createElement('div');
+                    if (isPrintMode) {
+                        div.className = 'print-lecture';
+                        div.innerHTML = `
+                            <span class="print-lecture-title">${lecture.subject}</span>
+                            <span class="print-lecture-details">
+                                👨‍🏫 د. ${lecture.professor}<br>
+                                🚪 ${lecture.room}
+                            </span>
+                        `;
+                    } else {
+                        div.className = 'lecture-card';
+                        div.innerHTML = `
+                            <button class="delete-btn" onclick="deleteLecture(${lecture.id})">×</button>
+                            <span class="lecture-title">${lecture.subject}</span>
+                            <span class="lecture-info">
+                                👨‍🏫 د. ${lecture.professor}<br>
+                                🚪 ${lecture.room}
+                            </span>
+                        `;
+                    }
+                    cell.appendChild(div);
+                }
+                row.appendChild(cell);
+            });
+            tbody.appendChild(row);
+        }
+
+        function renderSchedule() {
+            const screenBody = document.getElementById('screenBody');
+            screenBody.innerHTML = '';
+
+            const times = getUniqueSortedTimes();
+
+            if (times.length === 0) {
+                screenBody.innerHTML = '<tr><td colspan="7" style="padding: 20px; text-align: center; color: #777;">لا توجد محاضرات مضافة</td></tr>';
+                return;
+            }
+
+            // توليد الفترات الزمنية
+            const timeSlots = [];
+            for (let i = 0; i < times.length - 1; i++) {
+                timeSlots.push({ start: times[i], end: times[i+1] });
+            }
+
+            timeSlots.forEach(slot => renderRow(screenBody, slot, false));
+        }
+
+        function renderPrintTable() {
+            const printBody = document.getElementById('printBody');
+            printBody.innerHTML = '';
+            
+            const times = getUniqueSortedTimes();
+            if (times.length === 0) return;
+
+            const timeSlots = [];
+            for (let i = 0; i < times.length - 1; i++) {
+                timeSlots.push({ start: times[i], end: times[i+1] });
+            }
+
+            timeSlots.forEach(slot => renderRow(printBody, slot, true));
+        }
+
+        async function exportToPDF() {
+            if (lectures.length === 0) {
+                showAlert('❌ لا توجد محاضرات لتصديرها', 'error');
+                return;
+            }
+
+            showAlert('⏳ جاري إنشاء ملف PDF...', 'success');
+            
+            // تحضير جدول الطباعة
+            renderPrintTable();
+            
+            const element = document.getElementById('printableArea');
+            
+            // نجعل العنصر مرئياً مؤقتاً لالتقاطه
+            element.style.display = 'block';
+
+            try {
+                const canvas = await html2canvas(element, {
+                    scale: 2, // زيادة الدقة للوضوح
+                    useCORS: true,
+                    logging: false,
+                    windowWidth: 1200 // محاكاة عرض شاشة واسع
+                });
+                
+                const imgData = canvas.toDataURL('image/png');
+                
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('l', 'mm', 'a4'); // l = landscape
+                
+                const pageWidth = pdf.internal.pageSize.getWidth();
+                const pageHeight = pdf.internal.pageSize.getHeight();
+                
+                // حساب الأبعاد لتناسب الصفحة
+                const imgProps = pdf.getImageProperties(imgData);
+                const imgHeight = (imgProps.height * pageWidth) / imgProps.width;
+                
+                // إضافة الصورة (نترك هامش صغير)
+                pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, imgHeight);
+                
+                pdf.save('University_Schedule.pdf');
+                showAlert('✅ تم التحميل بنجاح', 'success');
+                
+            } catch (err) {
+                console.error(err);
+                showAlert('❌ حدث خطأ أثناء التصدير', 'error');
+            } finally {
+                element.style.display = 'none';
+            }
+        }
+
+        // التشغيل المبدئي
+        renderSchedule();
+    </script>
+</body>
+</html>
